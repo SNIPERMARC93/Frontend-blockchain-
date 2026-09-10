@@ -1,0 +1,25 @@
+import type { Employee, EmployeeQuery, CreateEmployeeInput, UpdateEmployeeInput, ImportRow, ImportResult } from '@/types';
+import { getDB, getActor, delay, clone, newId, transaction, auditEvent } from './store';
+import { access, demandEmployee, requireRecord, visibleEmployee } from './access';
+function validate(input:CreateEmployeeInput,id?:string){const db=getDB();if(!input.name.trim()||!input.designation.trim())throw new Error('Name and designation are required.');if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email))throw new Error('Enter a valid email address.');
+ if(db.employees.some(e=>e.id!==id&&!e.deletedAt&&e.email.toLowerCase()===input.email.toLowerCase()))throw new Error('This email already belongs to an employee.');
+ if(input.employeeId&&db.employees.some(e=>e.id!==id&&e.employeeId===input.employeeId))throw new Error('Employee ID already exists.');
+ requireRecord(db.units.find(u=>u.id===input.organisationUnitId&&!u.deletedAt),'Organisation unit');requireRecord(db.roles.find(r=>r.id===input.role&&!r.deletedAt),'Role');
+ if(input.managerId){requireRecord(db.employees.find(e=>e.id===input.managerId&&!e.deletedAt),'Manager');const seen=new Set(id?[id]:[]);let next:string|null=input.managerId;while(next){if(seen.has(next))throw new Error('Reporting manager would create a cycle.');seen.add(next);next=db.employees.find(e=>e.id===next)?.managerId||null;}}
+ if(access('employees','manage').scope!=='all'&&input.role!=='employee'&&input.role!==db.employees.find(e=>e.id===id)?.role)throw new Error('Only administrators can change elevated roles.');
+}
+function create(input:CreateEmployeeInput):Employee{validate(input);const id=newId('E');const employee:Employee={...input,id,employeeId:input.employeeId||id,createdAt:new Date().toISOString()};demandEmployee(employee,'manage');getDB().employees.push(employee);getDB().identities.push({id:newId('I'),employeeId:id,did:'did:example:'+getDB().activeOrganisationId+':'+id,status:input.identityStatus,verifiedAt:input.identityStatus==='Verified'?new Date().toISOString():null});auditEvent('Employee created','Employee',id,{name:employee.name});return employee;}
+export const EmployeeService={
+ async list(query:EmployeeQuery={}):Promise<Employee[]>{await delay();access('employees'); /* TODO: replace with axios.get('/api/employees', { params: query }) */
+ return clone(getDB().employees.filter(e=>!e.deletedAt&&visibleEmployee(e)&&(!query.search||[e.name,e.email,e.employeeId].join(' ').toLowerCase().includes(query.search.toLowerCase()))&&(!query.unitId||e.organisationUnitId===query.unitId)&&(!query.role||e.role===query.role)&&(!query.status||e.status===query.status)));},
+ async getById(id:string){await delay();const e=requireRecord(getDB().employees.find(e=>(e.id===id||e.employeeId===id)&&!e.deletedAt),'Employee');demandEmployee(e);return clone(e);},
+ async create(input:CreateEmployeeInput){await delay();access('employees','manage');return clone(transaction(()=>create(input)));},
+ async update(id:string,input:UpdateEmployeeInput){await delay();const e=requireRecord(getDB().employees.find(e=>e.id===id&&!e.deletedAt),'Employee');demandEmployee(e,'manage');const next={...e,...input};validate(next,id);demandEmployee(next,'manage');
+ if(e.id===getActor().id&&(next.role!==e.role||next.status!=='Active'))throw new Error('You cannot remove your own administrative access.');
+ return clone(transaction(()=>{Object.assign(e,next);getDB().assets.filter(a=>a.currentAssigneeId===id).forEach(a=>a.organisationUnitId=e.organisationUnitId);const identity=getDB().identities.find(i=>i.employeeId===id);if(identity)identity.status=e.identityStatus;auditEvent('Employee updated','Employee',id,{name:e.name});return e;}));},
+ async delete(id:string){await delay();const e=requireRecord(getDB().employees.find(e=>e.id===id&&!e.deletedAt),'Employee');demandEmployee(e,'manage');if(e.id===getActor().id)throw new Error('You cannot delete your own account.');if(getDB().assets.some(a=>a.currentAssigneeId===id))throw new Error('Return or transfer this employee’s assets before deleting.');
+ if(getDB().employees.some(p=>!p.deletedAt&&p.managerId===id)||getDB().units.some(u=>!u.deletedAt&&u.managerId===id))throw new Error('Reassign this employee’s reporting relationships before deleting.');
+ transaction(()=>{e.deletedAt=new Date().toISOString();e.status='Inactive';auditEvent('Employee deleted','Employee',id,{name:e.name});});},
+ async import(rows:ImportRow[]):Promise<ImportResult>{await delay();access('employees','manage');let skipped=0;const errors:string[]=[],created:Employee[]=[];transaction(()=>{for(const row of rows){if(row.errors.length||!row.input){skipped++;errors.push('Row '+row.row+': '+row.errors.join(', '));continue;}try{created.push(create(row.input));auditEvent('Employee imported','Employee',created[created.length-1].id,{name:row.input.name});}catch(e){skipped++;errors.push('Row '+row.row+': '+(e as Error).message);}}});return {status:created.length?(skipped?'partial':'success'):'failed',imported:created.length,skipped,employees:clone(created),errors};},
+};
+

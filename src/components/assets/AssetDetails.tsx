@@ -1,0 +1,7 @@
+import {Link} from 'react-router-dom';
+import type {Asset,AssetAssignment} from '@/types';
+import {Panel,Details} from '@/components/ui/Page';
+import {Badge} from '@/components/ui/Badge';
+import {formatDate} from '@/utils/formatDate';
+export function AssetDetails({asset,assignment,names,unitName,organisationName}:{asset:Asset;assignment?:AssetAssignment;names:Record<string,string>;unitName:string;organisationName:string}){return <div className="dashboard-grid"><Panel title="Asset information"><div className="panel-body"><Details items={[['Asset ID',<span className="mono">{asset.assetId}</span>],['Type',asset.type],['Serial number',asset.serialNumber],['Condition',asset.condition],['Location',asset.locationId],['Organisation unit',<Link to={'/organisation/'+asset.organisationUnitId}>{unitName}</Link>],['Registered',formatDate(asset.createdAt)],['Expiry',formatDate(asset.expiresAt)]]}/></div></Panel><Panel title="Ownership and verification"><div className="panel-body"><Details items={[['Owner',organisationName],['Current assignee',asset.currentAssigneeId?<Link to={'/employees/'+asset.currentAssigneeId}>{names[asset.currentAssigneeId]||asset.currentAssigneeId}</Link>:'Unassigned'],['Assigned by',assignment?names[assignment.assignedById]||assignment.assignedById:'—'],['Assigned on',formatDate(assignment?.assignedAt)],['Asset status',<Badge>{asset.status}</Badge>],['Blockchain Status',<Badge>{asset.blockchainStatus}</Badge>]]}/></div></Panel></div>;}
+

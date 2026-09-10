@@ -1,0 +1,11 @@
+import {useState} from 'react';
+import {ScanLine} from 'lucide-react';
+import type {Action,Resource,VerificationResultData} from '@/types';
+import {VerificationService} from '@/services/VerificationService';
+import {useNotifications} from '@/hooks/useNotifications';
+import {Input} from '@/components/ui/Input';
+import {Select} from '@/components/ui/Select';
+import {Button} from '@/components/ui/Button';
+import {VerificationResult} from './VerificationResult';
+export function VerificationForm({kind}:{kind:VerificationResultData['kind']}){const [id,setId]=useState(''),[resource,setResource]=useState<Resource>('assets'),[action,setAction]=useState<Action>('view'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[result,setResult]=useState<VerificationResultData|null>(null),{toast}=useNotifications();return <><form className="stack" onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');setResult(null);try{const r=await VerificationService.verify(kind,id,resource,action);setResult(r);toast(r.verified?'Verification complete':'Record not verified',r.verified?'success':'warning');}catch(e){setError((e as Error).message);}finally{setBusy(false);}}}><Input label={kind==='Asset'?'Asset ID':kind==='Identity'?'Employee ID or public identity ID':'Employee ID'} placeholder={kind==='Asset'?'For example, L001':'For example, E005'} value={id} onChange={e=>setId(e.target.value)} required disabled={busy}/>{kind==='Authorization'&&<div className="form-grid"><Select label="Resource" options={['employees','assets','organisation','roles','audit','verification'].map(v=>({value:v,label:v.charAt(0).toUpperCase()+v.slice(1)}))} value={resource} onChange={e=>setResource(e.target.value as Resource)} disabled={busy}/><Select label="Action" options={['view','manage','assign','audit'].map(v=>({value:v,label:v.charAt(0).toUpperCase()+v.slice(1)}))} value={action} onChange={e=>setAction(e.target.value as Action)} disabled={busy}/></div>}{error&&<p className="form-error" role="alert">{error}</p>}<div><Button type="submit" disabled={busy}><ScanLine size={17}/>{busy?'Verifying…':'Verify '+kind.toLowerCase()}</Button></div></form>{result&&<VerificationResult result={result}/>}</>;}
+

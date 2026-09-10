@@ -1,0 +1,3 @@
+import {SettingsForm} from './SettingsForm';
+export default function NotificationsSettings(){return <SettingsForm page="notifications" title="Notification preferences" description="Choose the updates you want to receive" initial={{success:true,warning:true,error:true,info:true}} fields={[{key:'success',label:'Workspace updates',type:'toggle',description:'Employee, asset and organisation changes.'},{key:'warning',label:'Reminders and pending actions',type:'toggle',description:'Items requiring review.'},{key:'error',label:'Failed operations',type:'toggle',description:'Import errors and unsuccessful verifications.'},{key:'info',label:'General information',type:'toggle',description:'Announcements and informational updates.'}]}/>;}
+

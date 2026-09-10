@@ -1,0 +1,8 @@
+import {Link} from 'react-router-dom';
+import {LockKeyhole,Pencil,Trash2,Users} from 'lucide-react';
+import type {Role} from '@/types';
+import {Table} from '@/components/ui/Table';
+import {Badge} from '@/components/ui/Badge';
+import {Button} from '@/components/ui/Button';
+export function RoleTable({roles,members,onEdit,onDelete}:{roles:Role[];members:Record<string,number>;onEdit?:(role:Role)=>void;onDelete?:(role:Role)=>void}){return <Table rows={roles} caption="Roles and permissions" columns={[{key:'name',title:'Role',render:r=><Link to={'/roles/'+r.id}><strong style={{fontWeight:500}}>{r.name}</strong><small style={{display:'block',whiteSpace:'normal',maxWidth:320,color:'#64748b'}}>{r.description}</small></Link>},{key:'type',title:'Type',render:r=><Badge>{r.isSystem?'System':'Custom'}</Badge>},{key:'permissions',title:'Permissions',render:r=>r.permissions.length},{key:'members',title:'Members',render:r=><Link to={'/roles/'+r.id+'#members'}>{members[r.id]||0} members</Link>},{key:'actions',title:'Actions',render:r=><div className="row-actions"><Link className="btn btn-ghost" aria-label={'View members of '+r.name} to={'/roles/'+r.id+'#members'}><Users size={16}/></Link>{onEdit&&r.id!=='admin'&&<Button variant="ghost" aria-label={'Edit '+r.name} onClick={()=>onEdit(r)}><Pencil size={15}/></Button>}{r.isSystem?<span className="btn btn-ghost" title="System roles cannot be deleted" aria-label="Protected system role"><LockKeyhole size={14}/></span>:onDelete&&<Button variant="ghost" aria-label={'Delete '+r.name} onClick={()=>onDelete(r)}><Trash2 size={15}/></Button>}</div>}]}/>;}
+

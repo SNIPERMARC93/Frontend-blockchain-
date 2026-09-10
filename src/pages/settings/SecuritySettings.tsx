@@ -1,0 +1,3 @@
+import {SettingsForm} from './SettingsForm';
+export default function SecuritySettings(){return <SettingsForm page="security" title="Security preferences" description="Policy previews for backend integration" initial={{length:'12 characters',timeout:'8 hours',requireMfa:false}} fields={[{key:'length',label:'Minimum password length',options:['8 characters','12 characters','16 characters']},{key:'timeout',label:'Session duration',options:['1 hour','8 hours','24 hours'],description:'The current demo session expires after 8 hours.'},{key:'requireMfa',label:'Require additional verification',type:'toggle',description:'Preview only. No external authentication provider is connected.'}]}/>;}
+

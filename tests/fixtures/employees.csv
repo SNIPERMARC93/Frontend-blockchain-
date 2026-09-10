@@ -1,0 +1,3 @@
+name,email,designation,organisationUnitId,managerId,role,status,identityStatus
+CSV Demo,csv.demo@acme.example,Frontend Engineer,frontend,E005,employee,Active,Pending
+Duplicate,aarav.shah@acme.example,Frontend Engineer,frontend,E005,employee,Active,Pending

@@ -20,5 +20,6 @@
     }
   },
   "include": ["src"],
+  "exclude": ["src/app", "src/lib/auth-context.tsx"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

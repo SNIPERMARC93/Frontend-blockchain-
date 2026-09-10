@@ -1,0 +1,3 @@
+import {SettingsForm} from './SettingsForm';
+export default function AssetsSettings(){return <SettingsForm page="assets" title="Asset preferences" description="Configure categories and condition labels" initial={{categories:'Laptops, Mobile Devices, Vehicles, Software Licenses, Certificates',conditions:'Excellent, Good, Fair, Needs repair',approval:true}} fields={[{key:'categories',label:'Asset categories',required:true},{key:'conditions',label:'Condition types',required:true},{key:'approval',label:'Require assignment confirmation',type:'toggle',description:'Preview preference. The demo always confirms assignments.'}]}/>;}
+

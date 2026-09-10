@@ -1,0 +1,2 @@
+import { useId, type InputHTMLAttributes } from 'react';
+export function Input({label,error,className='',id,...props}:InputHTMLAttributes<HTMLInputElement>&{label?:string;error?:string}){const generated=useId();const fieldId=id||generated;return <label className={'field '+className} htmlFor={fieldId}>{label&&<span>{label}</span>}<input id={fieldId} aria-invalid={!!error} aria-describedby={error?fieldId+'-error':undefined} {...props}/>{error&&<small id={fieldId+'-error'} className="error-text">{error}</small>}</label>;}

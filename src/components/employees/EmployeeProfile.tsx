@@ -1,0 +1,14 @@
+import {Link,useSearchParams} from 'react-router-dom';
+import type {Employee,Asset,Identity,OrganisationUnit,AuditEvent} from '@/types';
+import {Panel,Details,Tabs} from '@/components/ui/Page';
+import {Badge} from '@/components/ui/Badge';
+import {AssetCard} from '@/components/assets/AssetCard';
+import {AuditTimeline} from '@/components/audit/AuditTimeline';
+import {EmptyState} from '@/components/ui/EmptyState';
+import {unitPath} from '@/utils/buildTree';
+import {formatDate} from '@/utils/formatDate';
+export function EmployeeProfile({employee,assets,identity,units,audit,manager,roleName}:{employee:Employee;assets:Asset[];identity:Identity;units:OrganisationUnit[];audit:AuditEvent[];manager?:string;roleName:string}){
+ const [params,setParams]=useSearchParams(),tabs=['Overview','Organisation','Assigned Assets','Identity','Activity'],tab=tabs.includes(params.get('tab')||'')?params.get('tab')!:'Overview';
+ return <><Tabs tabs={tabs} active={tab} onChange={tab=>setParams({tab},{replace:true})}/>{tab==='Overview'&&<Panel title="Employee information"><div className="panel-body"><Details items={[['Employee ID',employee.employeeId],['Full name',employee.name],['Email',employee.email],['Designation',employee.designation],['Role',roleName],['Status',<Badge>{employee.status}</Badge>],['Identity status',<Badge>{employee.identityStatus}</Badge>],['Joined',formatDate(employee.createdAt)]]}/></div></Panel>}{tab==='Organisation'&&<Panel title="Organisation and reporting"><div className="panel-body"><Details items={[['Organisation path',unitPath(units,employee.organisationUnitId).map(u=>u.name).join(' / ')],['Current unit',<Link to={'/organisation/'+employee.organisationUnitId}>{units.find(u=>u.id===employee.organisationUnitId)?.name}</Link>],['Reporting manager',manager||'No reporting manager'],['Designation',employee.designation]]}/></div></Panel>}{tab==='Assigned Assets'&&<Panel title="Assigned assets" description={assets.length+' assets currently assigned'}><div className="panel-body">{assets.length?<div className="cards-grid">{assets.map(a=><AssetCard key={a.id} asset={a}/>)}</div>:<EmptyState title="No assets assigned" description="Assets assigned to this employee will appear here." action={<Link className="btn btn-outline" to="/assets">Browse assets</Link>}/>}</div></Panel>}{tab==='Identity'&&<Panel title="Identity details" description="Public identity information"><div className="panel-body"><Details items={[['Identity ID',identity.id],['Decentralized identifier',<span className="mono">{identity.did}</span>],['Identity status',<Badge>{identity.status}</Badge>],['Last verified',formatDate(identity.verifiedAt)],['Employee reference',employee.employeeId]]}/><div className="notice" style={{marginTop:25}}>Identity records shown here are simulated for this frontend demo.</div></div></Panel>}{tab==='Activity'&&<Panel title="Employee activity"><AuditTimeline events={audit}/></Panel>}</>;
+}
+

@@ -1,373 +1,65 @@
-import { useEffect, useRef, useMemo } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { Environment, Sphere, Line, Instance, Instances, Ring } from '@react-three/drei'
-import { motion } from 'framer-motion'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import Lenis from 'lenis'
-import * as THREE from 'three'
-import { cn } from '@/lib/utils'
-
-gsap.registerPlugin(ScrollTrigger)
-
-// ─── Camera Proxy ──────────────────────────────────────────────────────────────
-const cameraProxy = { z: 15, y: 0 }
-
-// ─── 3D Network Scene ──────────────────────────────────────────────────────────
-function Network() {
-  const group = useRef<THREE.Group>(null)
-  const particlesRef = useRef<THREE.Points>(null)
-  const nodeCount = 150
-
-  const nodes = useMemo(() => {
-    const temp = []
-    for (let i = 0; i < nodeCount; i++) {
-      temp.push(
-        new THREE.Vector3(
-          (Math.random() - 0.5) * 40,
-          (Math.random() - 0.5) * 40,
-          (Math.random() - 0.5) * 40,
-        ),
-      )
-    }
-    return temp
-  }, [])
-
-  const connections = useMemo(() => {
-    const lines = []
-    for (let i = 0; i < nodeCount; i++) {
-      for (let j = i + 1; j < nodeCount; j++) {
-        if (nodes[i].distanceTo(nodes[j]) < 6) {
-          lines.push([nodes[i], nodes[j]])
-        }
-      }
-    }
-    return lines
-  }, [nodes])
-
-  const particlePositions = useMemo(
-    () => new Float32Array(500 * 3).map(() => (Math.random() - 0.5) * 80),
-    [],
-  )
-
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime()
-    if (group.current) {
-      group.current.rotation.y = t * 0.05
-      group.current.rotation.z = t * 0.02
-    }
-    if (particlesRef.current) {
-      particlesRef.current.rotation.y = -t * 0.02
-    }
-  })
-
-  return (
-    <>
-      <group ref={group}>
-        <Instances limit={nodeCount} range={nodeCount}>
-          <sphereGeometry args={[0.08, 16, 16]} />
-          <meshBasicMaterial color="#ffffff" transparent opacity={0.8} />
-          {nodes.map((pos, i) => (
-            <Instance key={i} position={pos} />
-          ))}
-        </Instances>
-
-        {connections.map((c, i) => (
-          <Line
-            key={i}
-            points={c as THREE.Vector3[]}
-            color="#ffffff"
-            transparent
-            opacity={0.15}
-            lineWidth={0.5}
-          />
-        ))}
-
-        <Ring args={[2, 2.05, 64]} position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <meshBasicMaterial color="#4ade80" transparent opacity={0.4} side={THREE.DoubleSide} />
-        </Ring>
-        <Ring args={[3, 3.02, 64]} position={[0, 0, 0]} rotation={[Math.PI / 3, Math.PI / 4, 0]}>
-          <meshBasicMaterial color="#ffffff" transparent opacity={0.2} side={THREE.DoubleSide} />
-        </Ring>
-        <Sphere args={[0.8, 32, 32]} position={[0, 0, 0]}>
-          <meshBasicMaterial color="#ffffff" transparent opacity={0.9} />
-        </Sphere>
-      </group>
-
-      <points ref={particlesRef}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[particlePositions, 3]} />
-        </bufferGeometry>
-        <pointsMaterial size={0.05} color="#88aa88" transparent opacity={0.4} sizeAttenuation />
-      </points>
-    </>
-  )
-}
-
-// ─── Camera Animator (R3F component) ────────────────────────────────────────────
-function CameraAnimator() {
-  useFrame((state) => {
-    state.camera.position.z = cameraProxy.z
-    state.camera.position.y = cameraProxy.y
-    state.camera.lookAt(0, 0, 0)
-  })
-  return null
-}
-
-// ─── Border Beam ────────────────────────────────────────────────────────────────
-interface BorderBeamProps {
-  className?: string
-  size?: number
-  duration?: number
-  borderWidth?: number
-  anchor?: number
-  colorFrom?: string
-  colorTo?: string
-  delay?: number
-}
-
-function BorderBeam({
-  className,
-  size = 200,
-  duration = 15,
-  anchor = 90,
-  borderWidth = 1.5,
-  colorFrom = '#ffaa40',
-  colorTo = '#9c40ff',
-  delay = 0,
-}: BorderBeamProps) {
-  return (
-    <div
-      style={
-        {
-          '--size': size,
-          '--duration': duration,
-          '--anchor': anchor,
-          '--border-width': borderWidth,
-          '--color-from': colorFrom,
-          '--color-to': colorTo,
-          '--delay': `-${delay}s`,
-        } as React.CSSProperties
-      }
-      className={cn(
-        'pointer-events-none absolute inset-0 rounded-[inherit] [border:calc(var(--border-width)*1px)_solid_transparent]',
-        '![mask-clip:padding-box,border-box] ![mask-composite:intersect] [mask:linear-gradient(transparent,transparent),linear-gradient(white,white)]',
-        'after:absolute after:aspect-square after:w-[calc(var(--size)*1px)] after:animate-border-beam after:[animation-delay:var(--delay)] after:[background:linear-gradient(to_left,var(--color-from),var(--color-to),transparent)] after:[offset-anchor:calc(var(--anchor)*1%)_50%] after:[offset-path:rect(0_auto_auto_0_round_calc(var(--size)*1px))]',
-        className,
-      )}
-    />
-  )
-}
-
-// ─── Portal Overlay ──────────────────────────────────────────────────────────────
-function PortalOverlay() {
-  return (
-    <div className="pointer-events-none fixed inset-0 z-10 h-full w-full">
-      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <mask id="textMask">
-            <rect width="100%" height="100%" fill="white" />
-            <g className="text-group">
-              <text
-                x="50%"
-                y="35%"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="black"
-                fontSize="12vw"
-                fontWeight="800"
-                letterSpacing="-0.02em"
-              >
-                IDENTITY
-              </text>
-              <text
-                x="50%"
-                y="50%"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="black"
-                fontSize="12vw"
-                fontWeight="800"
-                letterSpacing="-0.02em"
-              >
-                ORGANISATION
-              </text>
-              <text
-                x="50%"
-                y="65%"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="black"
-                fontSize="12vw"
-                fontWeight="800"
-                letterSpacing="-0.02em"
-              >
-                NETWORK
-              </text>
-            </g>
-          </mask>
-        </defs>
-        <rect width="100%" height="100%" fill="#020617" mask="url(#textMask)" />
-      </svg>
-    </div>
-  )
-}
-
-// ─── App Root ────────────────────────────────────────────────────────────────────
-export default function App() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    // Smooth scroll
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-    })
-    function raf(time: number) {
-      lenis.raf(time)
-      requestAnimationFrame(raf)
-    }
-    requestAnimationFrame(raf)
-
-    // GSAP Portal transition
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: 'top top',
-          end: '+=3000',
-          scrub: 1,
-          pin: true,
-        },
-      })
-
-      // Scale up the SVG text mask so letters "expand" into a portal
-      tl.to('.text-group', { scale: 40, transformOrigin: '50% 50%', ease: 'power2.inOut' }, 0)
-
-      // Push camera forward into the 3D network simultaneously
-      tl.to(cameraProxy, { z: 2, y: -2, ease: 'power2.inOut' }, 0)
-
-      // Reveal the dashboard/login card once inside the portal
-      tl.fromTo(
-        contentRef.current,
-        { opacity: 0, y: 100 },
-        { opacity: 1, y: 0, ease: 'power2.out' },
-        0.6,
-      )
-    }, containerRef)
-
-    return () => {
-      lenis.destroy()
-      ctx.revert()
-    }
-  }, [])
-
-  return (
-    <main className="relative bg-[#020617] text-white">
-      {/* ── Pinned 3D Portal Section ── */}
-      <section ref={containerRef} className="relative h-screen w-full overflow-hidden">
-
-        {/* Layer 1 + 2: Three.js Canvas */}
-        <div className="absolute inset-0 z-0">
-          <Canvas camera={{ position: [0, 0, 15], fov: 45 }}>
-            <color attach="background" args={['#020617']} />
-            <ambientLight intensity={0.5} />
-            <Network />
-            <Environment preset="city" />
-            <CameraAnimator />
-          </Canvas>
-        </div>
-
-        {/* Layer 3: SVG Typography Mask Portal */}
-        <PortalOverlay />
-
-        {/* Top minimal navigation */}
-        <nav
-          className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20 pointer-events-none mix-blend-difference"
-          aria-label="Main navigation"
-        >
-          <span className="text-sm font-bold tracking-widest">NEXUS ID</span>
-          <div className="flex gap-6 text-sm tracking-widest">
-            <button className="pointer-events-auto hover:opacity-70 transition-opacity">LOGIN</button>
-            <button className="pointer-events-auto hover:opacity-70 transition-opacity">MENU</button>
-          </div>
-        </nav>
-
-        {/* Layer 4: App content revealed after portal */}
-        <div
-          ref={contentRef}
-          className="absolute inset-0 z-30 flex items-center justify-center pointer-events-auto opacity-0"
-        >
-          <div className="relative overflow-hidden bg-slate-900/60 backdrop-blur-2xl border border-white/10 shadow-2xl text-white w-full max-w-md mx-4 p-8 rounded-2xl">
-            <BorderBeam size={250} duration={12} colorFrom="#4ade80" colorTo="#2dd4bf" delay={0} />
-
-            <div className="text-center space-y-3 mb-8">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-                className="mx-auto w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4"
-              >
-                <svg viewBox="0 0 24 24" className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
-              </motion.div>
-              <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-br from-white to-white/70 bg-clip-text text-transparent">
-                Welcome Back
-              </h1>
-              <p className="text-slate-300 text-sm">
-                Connect your wallet or use Google to continue
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {/* MetaMask */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full h-12 bg-[#F6851B]/10 hover:bg-[#F6851B]/20 border border-[#F6851B]/50 text-white flex items-center justify-center gap-3 rounded-lg transition-colors duration-300 font-medium"
-              >
-                <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
-                  <path d="M29.505 1.547L16.29 11.233L2.616 1.705L1.082 11.393L12.44 19.349L3.082 25.101L15.908 30.297L28.847 24.896L19.467 19.31L31.023 11.164L29.505 1.547Z" fill="#E2761B" stroke="#E2761B" strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Continue with MetaMask
-              </motion.button>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-white/10" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="px-2 text-slate-400">Or</span>
-                </div>
-              </div>
-
-              {/* Google */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full h-12 bg-white/5 hover:bg-white/10 border border-white/20 text-white flex items-center justify-center gap-3 rounded-lg transition-colors duration-300 font-medium"
-              >
-                <svg viewBox="0 0 24 24" className="w-5 h-5">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                </svg>
-                Continue with Google
-              </motion.button>
-            </div>
-
-            <p className="text-center text-xs text-slate-400 mt-6">
-              By connecting, you agree to our Terms of Service and Privacy Policy.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Spacer to allow GSAP scroll trigger to work */}
-      <div className="h-[3000px] w-full" />
-    </main>
-  )
-}
+import {lazy,Suspense} from 'react';
+import {BrowserRouter,Routes,Route,Navigate} from 'react-router-dom';
+import {AuthProvider} from '@/contexts/AuthContext';
+import {NotificationProvider} from '@/contexts/NotificationContext';
+import {ProtectedRoute} from '@/components/ProtectedRoute';
+import {AppShell} from '@/components/layout/AppShell';
+import {Toast} from '@/components/ui/Toast';
+import {LoadingState} from '@/components/ui/LoadingState';
+import {useSession} from '@/hooks/useSession';
+import {can} from '@/utils/permissions';
+import {AppErrorBoundary} from '@/components/AppErrorBoundary';
+import Login from '@/pages/Login';
+import Signup from '@/pages/Signup';
+import CreateOrganisation from '@/pages/onboarding/CreateOrganisation';
+import JoinOrganisation from '@/pages/onboarding/JoinOrganisation';
+import AdminDashboard from '@/pages/dashboard/AdminDashboard';
+import EmployeeDashboard from '@/pages/dashboard/EmployeeDashboard';
+import NotFound from '@/pages/errors/NotFound';
+import AccessDenied from '@/pages/errors/AccessDenied';
+import SettingsLayout from '@/pages/settings/SettingsLayout';
+import OrgSettings from '@/pages/settings/OrgSettings';
+import UsersSettings from '@/pages/settings/UsersSettings';
+import RolesSettings from '@/pages/settings/RolesSettings';
+import AssetsSettings from '@/pages/settings/AssetsSettings';
+import IdentitySettings from '@/pages/settings/IdentitySettings';
+import IntegrationsSettings from '@/pages/settings/IntegrationsSettings';
+import SecuritySettings from '@/pages/settings/SecuritySettings';
+import NotificationsSettings from '@/pages/settings/NotificationsSettings';
+import AccountSettings from '@/pages/settings/AccountSettings';
+import './workspace.css';
+const Landing=lazy(()=>import('@/pages/Landing'));
+const OrganisationPage=lazy(()=>import('@/pages/organisation/OrganisationPage'));
+const OrganisationUnitPage=lazy(()=>import('@/pages/organisation/OrganisationUnitPage'));
+const EmployeesPage=lazy(()=>import('@/pages/employees/EmployeesPage'));
+const EmployeeProfilePage=lazy(()=>import('@/pages/employees/EmployeeProfilePage'));
+const EmployeeImportPage=lazy(()=>import('@/pages/employees/EmployeeImportPage'));
+const AssetsPage=lazy(()=>import('@/pages/assets/AssetsPage'));
+const AssetDetailPage=lazy(()=>import('@/pages/assets/AssetDetailPage'));
+const AssetCategoryPage=lazy(()=>import('@/pages/assets/AssetCategoryPage'));
+const RolesPage=lazy(()=>import('@/pages/roles/RolesPage'));
+const RoleDetailPage=lazy(()=>import('@/pages/roles/RoleDetailPage'));
+const AuditPage=lazy(()=>import('@/pages/audit/AuditPage'));
+const VerificationPage=lazy(()=>import('@/pages/verification/VerificationPage'));
+function Dashboard(){const {permissions}=useSession();if(!can(permissions,'employees')||!can(permissions,'assets'))return <AccessDenied/>;return can(permissions,'audit')?<AdminDashboard/>:<EmployeeDashboard/>;}
+function SettingsIndex(){const {permissions}=useSession();return <Navigate to={can(permissions,'settings','manage')?'organisation':'account'} replace/>;}
+export default function App(){return <AppErrorBoundary><BrowserRouter><AuthProvider><NotificationProvider><Suspense fallback={<LoadingState/>}><Routes>
+  <Route path="/" element={<Landing/>}/><Route path="/login" element={<Login/>}/><Route path="/signup" element={<Signup/>}/>
+  <Route element={<ProtectedRoute onboarding/>}><Route path="/onboarding/create-organisation" element={<CreateOrganisation/>}/><Route path="/onboarding/join-organisation" element={<JoinOrganisation/>}/></Route>
+  <Route element={<ProtectedRoute/>}><Route element={<AppShell/>}>
+    <Route path="/dashboard" element={<Dashboard/>}/>
+    <Route element={<ProtectedRoute resource="organisation"/>}><Route path="/organisation" element={<OrganisationPage/>}/><Route path="/organisation/:unitId" element={<OrganisationUnitPage/>}/></Route>
+    <Route element={<ProtectedRoute resource="employees"/>}><Route path="/employees" element={<EmployeesPage/>}/><Route path="/employees/:employeeId" element={<EmployeeProfilePage/>}/></Route>
+    <Route element={<ProtectedRoute resource="employees" action="manage"/>}><Route path="/employees/import" element={<EmployeeImportPage/>}/></Route>
+    <Route element={<ProtectedRoute resource="assets"/>}><Route path="/assets" element={<AssetsPage/>}/><Route path="/assets/physical" element={<AssetsPage/>}/><Route path="/assets/digital" element={<AssetsPage/>}/><Route path="/assets/category/:categoryId" element={<AssetCategoryPage/>}/><Route path="/assets/:assetId" element={<AssetDetailPage/>}/></Route>
+    <Route element={<ProtectedRoute resource="roles"/>}><Route path="/roles" element={<RolesPage/>}/><Route path="/roles/:roleId" element={<RoleDetailPage/>}/></Route>
+    <Route element={<ProtectedRoute resource="audit"/>}><Route path="/audit" element={<AuditPage/>}/></Route>
+    <Route element={<ProtectedRoute resource="verification"/>}><Route path="/verification" element={<VerificationPage/>}/></Route>
+    <Route path="/settings" element={<SettingsLayout/>}><Route index element={<SettingsIndex/>}/><Route path="account" element={<AccountSettings/>}/><Route path="notifications" element={<NotificationsSettings/>}/>
+      <Route element={<ProtectedRoute resource="settings" action="manage"/>}><Route path="organisation" element={<OrgSettings/>}/><Route path="users" element={<UsersSettings/>}/><Route path="structure" element={<RolesSettings/>}/><Route path="roles" element={<Navigate to="/roles" replace/>}/><Route path="assets" element={<AssetsSettings/>}/><Route path="identity" element={<IdentitySettings/>}/><Route path="integrations" element={<IntegrationsSettings/>}/><Route path="security" element={<SecuritySettings/>}/></Route>
+      <Route path="*" element={<NotFound/>}/>
+    </Route>
+    <Route path="/access-denied" element={<AccessDenied/>}/>
+  </Route></Route>
+  <Route path="/onboarding" element={<Navigate to="/onboarding/create-organisation" replace/>}/><Route path="/org/create" element={<Navigate to="/onboarding/create-organisation" replace/>}/><Route path="/org/join" element={<Navigate to="/onboarding/join-organisation" replace/>}/><Route path="*" element={<NotFound/>}/>
+</Routes></Suspense><Toast/></NotificationProvider></AuthProvider></BrowserRouter></AppErrorBoundary>;}

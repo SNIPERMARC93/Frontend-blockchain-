@@ -1,0 +1,3 @@
+import {SettingsForm} from './SettingsForm';
+export default function IdentitySettings(){return <SettingsForm page="identity" title="Identity configuration" description="Configuration preview for a future identity provider" initial={{method:'did:example',verification:'Administrator review',renewal:true}} fields={[{key:'method',label:'DID method',options:['did:example'],description:'The demo uses public example identifiers.'},{key:'verification',label:'Verification policy',options:['Administrator review','External identity provider']},{key:'renewal',label:'Notify on identity changes',type:'toggle',description:'Preview identity lifecycle notifications.'}]}/>;}
+

@@ -1,0 +1,2 @@
+export function Skeleton({rows=5}:{rows?:number}){return <div className="skeleton-list" role="status" aria-label="Loading records">{Array.from({length:rows},(_,i)=><div className="skeleton-row" key={i}><span className="skeleton avatar"/><div className="grow"><div className="skeleton skeleton-line"/><div className="skeleton skeleton-line short"/></div><span className="skeleton skeleton-pill"/></div>)}<span className="sr-only">Loading records…</span></div>;}
+

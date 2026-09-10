@@ -1,0 +1,6 @@
+import type {Permission,Resource,Action,Scope} from '@/types';
+const resources:Resource[]=['employees','assets','organisation','roles','audit','verification'];const actions:Action[]=['view','manage','assign','audit'];
+export function PermissionMatrix({permissions,onChange,scope='all'}:{permissions:Permission[];onChange?:(permissions:Permission[])=>void;scope?:Scope}){
+ return <div className="table-scroll permission-grid" role="region" tabIndex={0} aria-label="Permission matrix"><table><caption className="sr-only">Permissions by resource and action</caption><thead><tr><th>Resource</th>{actions.map(a=><th key={a} style={{textTransform:'capitalize'}}>{a}</th>)}</tr></thead><tbody>{resources.map(resource=><tr key={resource}><td style={{textTransform:'capitalize',color:'#e2e8f0'}}>{resource}</td>{actions.map(action=>{const p=permissions.find(p=>p.resource===resource&&p.action===action);return <td key={action}><input type="checkbox" aria-label={resource+' '+action} title={p?'Scope: '+p.scope:'Not permitted'} checked={!!p} disabled={!onChange} onChange={e=>onChange?.(e.target.checked?[...permissions,{id:resource+'.'+action,resource,action,scope}]:permissions.filter(p=>p.resource!==resource||p.action!==action))}/>{p&&<small style={{display:'block',fontSize:9,color:'#64748b'}}>{p.scope}</small>}</td>;})}</tr>)}</tbody></table></div>;
+}
+

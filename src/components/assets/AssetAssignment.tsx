@@ -1,0 +1,17 @@
+import {useState} from 'react';
+import type {Asset,AssetAssignment as Assignment} from '@/types';
+import {useQuery} from '@/hooks/useQuery';
+import {useNotifications} from '@/hooks/useNotifications';
+import {EmployeeService} from '@/services/EmployeeService';
+import {AssetService} from '@/services/AssetService';
+import {Modal} from '@/components/ui/Modal';
+import {Button} from '@/components/ui/Button';
+import {Input} from '@/components/ui/Input';
+import {Select} from '@/components/ui/Select';
+import {Details,QueryState} from '@/components/ui/Page';
+import {Badge} from '@/components/ui/Badge';
+export function AssetAssignment({asset,onClose,currentName,transfer=false}:{asset:Asset;onClose:()=>void;currentName?:string;transfer?:boolean}){
+ const query=useQuery(()=>EmployeeService.list({status:'Active'})),[employeeId,setEmployee]=useState(''),[reason,setReason]=useState(''),[step,setStep]=useState(1),[busy,setBusy]=useState(false),[error,setError]=useState(''),[result,setResult]=useState<Assignment|null>(null),{toast}=useNotifications();const name=query.data?.find(e=>e.id===employeeId)?.name||employeeId;
+ return <Modal title={result?'Asset '+(transfer?'transferred':'assigned'):transfer?'Transfer asset':'Assign asset'} onClose={onClose} busy={busy}><div className="modal-body">{result?<div role="status" className="notice success"><h3>{transfer?'Transfer complete':'Assignment complete'}</h3><Details items={[['Asset',asset.name],...(transfer?[['Previous assignee',currentName||'—']] as [string,string][]:[]),['New assignee',name],['Status',<Badge>Assigned</Badge>],['Transaction Reference',<span className="mono">{result.transactionRef}</span>]]}/></div>:<QueryState query={query}>{step===1?<form id="assignment-form" className="stack" onSubmit={e=>{e.preventDefault();setStep(2);}}><div className="notice"><strong>{asset.name}</strong><p>{asset.assetId}{transfer?' · Current assignee: '+currentName:''}</p></div><Select label={transfer?'New employee':'Assign to employee'} placeholder="Select an active employee" options={query.data?.filter(e=>e.id!==asset.currentAssigneeId).map(e=>({value:e.id,label:e.name+' · '+e.employeeId}))||[]} value={employeeId} onChange={e=>setEmployee(e.target.value)} required/><Input label="Reason" placeholder={transfer?'Why is this asset being transferred?':'Why is this asset being assigned?'} value={reason} onChange={e=>setReason(e.target.value)} required maxLength={300}/></form>:<><p>Review the details before confirming.</p><Details items={[['Asset',asset.name],['Employee',name],['Change',transfer?(currentName||'Current assignee')+' → '+name:asset.status+' → Assigned'],['Reason',reason]]}/></>}</QueryState>}{error&&<p role="alert" className="form-error">{error}</p>}</div><div className="modal-footer">{result?<Button onClick={onClose}>Done</Button>:<><Button variant="outline" disabled={busy} onClick={()=>step===2?setStep(1):onClose()}>{step===2?'Back':'Cancel'}</Button>{step===1?<Button type="submit" form="assignment-form" disabled={query.loading||!!query.error||!query.data?.some(e=>e.id!==asset.currentAssigneeId)}>Review {transfer?'transfer':'assignment'}</Button>:<Button disabled={busy} onClick={async()=>{setBusy(true);setError('');try{setResult(await AssetService.assign(asset.id,employeeId,reason,asset.currentAssigneeId));toast(transfer?'Asset transferred':'Asset assigned');}catch(e){setError((e as Error).message);}finally{setBusy(false);}}}>{busy?'Submitting…':transfer?'Confirm transfer':'Confirm assignment'}</Button>}</>}</div></Modal>;
+}
+

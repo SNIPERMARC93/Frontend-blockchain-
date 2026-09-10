@@ -12,7 +12,7 @@ import { PortalOverlay } from "@/components/canvas/PortalOverlay";
 
 // Import existing login components from the previous page
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
