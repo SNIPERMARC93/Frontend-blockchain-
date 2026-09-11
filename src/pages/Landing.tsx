@@ -12,6 +12,8 @@ import { useNavigate } from 'react-router-dom'
 
 gsap.registerPlugin(ScrollTrigger)
 
+const landingColors = { background: '#013330', text: '#CEE9FD' }
+
 // ─── Camera Proxy ──────────────────────────────────────────────────────────────
 const cameraProxy = { z: 15, y: 0 }
 
@@ -68,7 +70,7 @@ function Network() {
       <group ref={group}>
         <Instances limit={nodeCount} range={nodeCount}>
           <sphereGeometry args={[0.08, 16, 16]} />
-          <meshBasicMaterial color="#ffffff" transparent opacity={0.8} />
+          <meshBasicMaterial color={landingColors.text} transparent opacity={0.8} />
           {nodes.map((pos, i) => (
             <Instance key={i} position={pos} />
           ))}
@@ -78,7 +80,7 @@ function Network() {
           <Line
             key={i}
             points={c as THREE.Vector3[]}
-            color="#ffffff"
+            color={landingColors.text}
             transparent
             opacity={0.15}
             lineWidth={0.5}
@@ -86,13 +88,13 @@ function Network() {
         ))}
 
         <Ring args={[2, 2.05, 64]} position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <meshBasicMaterial color="#4ade80" transparent opacity={0.4} side={THREE.DoubleSide} />
+          <meshBasicMaterial color={landingColors.text} transparent opacity={0.4} side={THREE.DoubleSide} />
         </Ring>
         <Ring args={[3, 3.02, 64]} position={[0, 0, 0]} rotation={[Math.PI / 3, Math.PI / 4, 0]}>
-          <meshBasicMaterial color="#ffffff" transparent opacity={0.2} side={THREE.DoubleSide} />
+          <meshBasicMaterial color={landingColors.text} transparent opacity={0.2} side={THREE.DoubleSide} />
         </Ring>
         <Sphere args={[0.8, 32, 32]} position={[0, 0, 0]}>
-          <meshBasicMaterial color="#ffffff" transparent opacity={0.9} />
+          <meshBasicMaterial color={landingColors.text} transparent opacity={0.9} />
         </Sphere>
       </group>
 
@@ -100,7 +102,7 @@ function Network() {
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[particlePositions, 3]} />
         </bufferGeometry>
-        <pointsMaterial size={0.05} color="#88aa88" transparent opacity={0.4} sizeAttenuation />
+        <pointsMaterial size={0.05} color={landingColors.text} transparent opacity={0.4} sizeAttenuation />
       </points>
     </>
   )
@@ -119,20 +121,21 @@ function CameraAnimator() {
 // ─── Portal Overlay ──────────────────────────────────────────────────────────────
 function PortalOverlay() {
   return (
-    <div className="pointer-events-none fixed inset-0 z-10 h-full w-full">
-      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Identity, Organisation, Network">
+    <div className="portal-overlay pointer-events-none fixed inset-0 z-10 h-full w-full">
+      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Where your trust lives">
         <defs>
           <g id="portalWords">
-            {['IDENTITY', 'ORGANISATION', 'NETWORK'].map((word, index) => (
+            {['WHERE', 'YOUR TRUST', 'LIVES'].map((word, index) => (
               <text
                 key={word}
                 x="50%"
-                y={`${35 + index * 15}%`}
+                y="50%"
+                dy={`${(index - 1) * 0.95}em`}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fontSize="12vw"
-                fontWeight="800"
-                letterSpacing="-0.02em"
+                style={{ fontSize: 'min(13vw, 22vh)' }}
+                fontWeight="900"
+                letterSpacing="-0.045em"
               >
                 {word}
               </text>
@@ -143,9 +146,9 @@ function PortalOverlay() {
             <use href="#portalWords" className="text-group" fill="black" />
           </mask>
         </defs>
-        <rect width="100%" height="100%" fill="#020617" mask="url(#textMask)" />
+        <rect width="100%" height="100%" fill={landingColors.background} mask="url(#textMask)" />
         {/* The scene and mask share a dark background, so the cutouts need visible lettering. */}
-        <use href="#portalWords" className="text-group portal-lettering" fill="white" opacity={0.9} />
+        <use href="#portalWords" className="text-group portal-lettering" fill={landingColors.text} />
       </svg>
     </div>
   )
@@ -186,6 +189,8 @@ export default function App() {
       // Scale up the SVG text mask so letters "expand" into a portal
       tl.to('.text-group', { scale: 40, transformOrigin: '50% 50%', ease: 'power2.inOut' }, 0)
       tl.to('.portal-lettering', { opacity: 0, duration: 0.35, ease: 'power2.in' }, 0)
+      // Clear the enlarged letter mask before it can cover the login backdrop.
+      tl.to('.portal-overlay', { autoAlpha: 0, duration: 0.15 }, 0.45)
 
       // Push camera forward into the 3D network simultaneously
       tl.to(cameraProxy, { z: 2, y: -2, ease: 'power2.inOut' }, 0)
@@ -202,14 +207,14 @@ export default function App() {
   }, [])
 
   return (
-    <main className="relative bg-[#020617] text-white">
+    <main className="relative" style={{ backgroundColor: landingColors.background, color: landingColors.text }}>
       {/* ── Pinned 3D Portal Section ── */}
       <section ref={containerRef} className="relative h-screen w-full overflow-hidden">
 
         {/* Layer 1 + 2: Three.js Canvas */}
         <div className="absolute inset-0 z-0">
           <Canvas camera={{ position: [0, 0, 15], fov: 45 }}>
-            <color attach="background" args={['#020617']} />
+            <color attach="background" args={[landingColors.background]} />
             <ambientLight intensity={0.5} />
             <Network />
             {/* Unlit materials need no external environment map. */}
@@ -222,7 +227,7 @@ export default function App() {
 
         {/* Top minimal navigation */}
         <nav
-          className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20 pointer-events-none mix-blend-difference"
+          className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20 pointer-events-none"
           aria-label="Main navigation"
         >
           <span className="text-sm font-bold tracking-widest">NEXUS ID</span>
